@@ -29,7 +29,7 @@ Este proyecto es una implementación de un clásico juego tipo "Breakout" utiliz
 
 1. **Clona** este repositorio en tu máquina local:
    ```bash
-   git clone https://github.com/usuario/repo.git
+   git clone https://github.com/CRISHFAS/Clon-del-Juego-Breakout
 
 2. Abra el archivoindex.html en su navegador web para comenzar a jugar.
 
