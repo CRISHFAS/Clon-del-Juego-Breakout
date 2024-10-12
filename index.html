@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Clon del Juego Breakout</title>
+    <style>
+        body {
+            background-color: #000;
+            text-align: center;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            background-color: #000;
+            display: block;
+            margin: 0 auto;
+            border: 1px solid #fff;
+        }
+        #startButton {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Clon del Juego Breakout</h1>
+<canvas id="canvas" width="600" height="400"></canvas>
+<button id="startButton">Iniciar Juego</button>
+
+<script>
+// Variables globales
+var canvas = document.getElementById('canvas');
+var ctx = canvas.getContext('2d');
+var x, y, dx, dy, WIDTH, HEIGHT, paddlex, paddleh, paddlew;
+var rightDown = false;
+var leftDown = false;
+var intervalId;
+var ballr = 10;
+var bricks;
+var NROWS = 5;
+var NCOLS = 8;
+var BRICKWIDTH;
+var BRICKHEIGHT = 20;
+var PADDING = 2;
+var rowcolors = ["#FF1C0A", "#FFFD0A", "#00A308", "#0008DB", "#EB0093"];
+var paddlecolor = "#FFFFFF";
+var ballcolor = "#FFFFFF";
+var backcolor = "#000000";
+var gameStarted = false;
+
+// Inicializa el juego
+function init() {
+    if (gameStarted) return; // Evita reiniciar el juego si ya está en marcha
+    gameStarted = true;
+
+    // Restablecer variables
+    x = canvas.width / 2;
+    y = canvas.height - 30;
+    dx = 3;
+    dy = -3;
+    paddlex = (canvas.width - paddlew) / 2;
+    rightDown = false;
+    leftDown = false;
+
+    WIDTH = canvas.width;
+    HEIGHT = canvas.height;
+    BRICKWIDTH = (WIDTH / NCOLS) - PADDING;
+    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+    initbricks();
+    init_mouse();
+    if (intervalId) clearInterval(intervalId);
+    intervalId = setInterval(draw, 10);
+}
+
+// Dibuja el círculo (bola)
+function circle(x, y, r) {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2, true);
+    ctx.closePath();
+    ctx.fill();
+}
+
+// Dibuja el rectángulo (paddle o ladrillos)
+function rect(x, y, w, h) {
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.closePath();
+    ctx.fill();
+}
+
+// Limpia la pantalla
+function clear() {
+    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+}
+
+// Inicializa los ladrillos
+function initbricks() {
+    bricks = [];
+    for (var i = 0; i < NROWS; i++) {
+        bricks[i] = [];
+        for (var j = 0; j < NCOLS; j++) {
+            bricks[i][j] = 1;
+        }
+    }
+}
+
+// Inicializa el paddle
+function init_paddle() {
+    paddleh = 15;
+    paddlew = 100;
+    paddlex = (WIDTH - paddlew) / 2;
+}
+
+// Inicializa el movimiento del ratón
+function init_mouse() {
+    var canvasMinX = canvas.offsetLeft;
+    var canvasMaxX = canvasMinX + WIDTH;
+
+    document.addEventListener('mousemove', function(evt) {
+        var rect = canvas.getBoundingClientRect();
+        var root = document.documentElement;
+        var mouseX = evt.clientX - rect.left - root.scrollLeft;
+        if (mouseX > 0 && mouseX < WIDTH) {
+            paddlex = mouseX - paddlew / 2;
+        }
+    });
+}
+
+// Control de teclas
+document.addEventListener('keydown', function(evt) {
+    if (evt.key === 'ArrowRight') rightDown = true;
+    else if (evt.key === 'ArrowLeft') leftDown = true;
+});
+
+document.addEventListener('keyup', function(evt) {
+    if (evt.key === 'ArrowRight') rightDown = false;
+    else if (evt.key === 'ArrowLeft') leftDown = false;
+});
+
+// Dibuja los ladrillos
+function drawbricks() {
+    for (var i = 0; i < NROWS; i++) {
+        ctx.fillStyle = rowcolors[i % rowcolors.length];
+        for (var j = 0; j < NCOLS; j++) {
+            if (bricks[i][j] === 1) {
+                rect(
+                    (j * (BRICKWIDTH + PADDING)) + PADDING,
+                    (i * (BRICKHEIGHT + PADDING)) + PADDING,
+                    BRICKWIDTH,
+                    BRICKHEIGHT
+                );
+            }
+        }
+    }
+}
+
+// Dibuja la escena
+function draw() {
+    clear();
+
+    // Dibuja la bola
+    ctx.fillStyle = ballcolor;
+    circle(x, y, ballr);
+
+    // Movimiento del paddle
+    if (rightDown && paddlex < WIDTH - paddlew) paddlex += 5;
+    else if (leftDown && paddlex > 0) paddlex -= 5;
+
+    // Dibuja el paddle
+    ctx.fillStyle = paddlecolor;
+    rect(paddlex, HEIGHT - paddleh, paddlew, paddleh);
+
+    // Dibuja los ladrillos
+    drawbricks();
+
+    // Lógica de colisiones con ladrillos
+    var rowheight = BRICKHEIGHT + PADDING;
+    var colwidth = BRICKWIDTH + PADDING;
+    var row = Math.floor(y / rowheight);
+    var col = Math.floor(x / colwidth);
+
+    if (y < NROWS * rowheight && row >= 0 && col >= 0 && bricks[row][col] === 1) {
+        dy = -dy;
+        bricks[row][col] = 0;
+    }
+
+    // Colisiones con paredes
+    if (x + dx > WIDTH - ballr || x + dx < ballr) {
+        dx = -dx;
+    }
+    if (y + dy < ballr) {
+        dy = -dy;
+    } else if (y + dy > HEIGHT - paddleh - ballr) {
+        if (x > paddlex && x < paddlex + paddlew) {
+            // Calcula la dirección del rebote
+            var deltaX = x - (paddlex + paddlew / 2);
+            dx = deltaX * 0.1;
+            dy = -dy;
+        } else if (y + dy > HEIGHT - ballr) {
+            // Fin del juego
+            clearInterval(intervalId);
+            gameStarted = false;
+            alert('¡Juego terminado!');
+        }
+    }
+
+    // Actualiza la posición de la bola
+    x += dx;
+    y += dy;
+}
+
+// Agrega el evento al botón para iniciar el juego
+document.getElementById('startButton').addEventListener('click', function() {
+    init_paddle();
+    init();
+});
+
+</script>
+
+</body>
+</html>
